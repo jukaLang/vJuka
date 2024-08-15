@@ -1,0 +1,6 @@
+{
+"label":"Hello World",
+"icon":"icon.png",
+"launch":"launch.sh",
+"description":"Just Echoes Hello World"
+}
