@@ -24,6 +24,15 @@ fun scanApps(directoryPath: String): List<AppInfo> {
                         val relativeIconPath = "Apps/${subDir.name}/$icon"
                         val relativeLaunchPath = "Apps/${subDir.name}/$launch"
                         appInfoList.add(AppInfo(label, relativeIconPath, relativeLaunchPath, description))
+
+                        //FOR DEBUGGING
+                        if(debug) {
+                            appInfoList.add(AppInfo(label, relativeIconPath, relativeLaunchPath, description))
+                            appInfoList.add(AppInfo(label, relativeIconPath, relativeLaunchPath, description))
+                            appInfoList.add(AppInfo(label, relativeIconPath, relativeLaunchPath, description))
+                            appInfoList.add(AppInfo(label, relativeIconPath, relativeLaunchPath, description))
+                            appInfoList.add(AppInfo(label, relativeIconPath, relativeLaunchPath, description))
+                        }
                     } catch (e: Exception) {
                         // Handle exceptions while reading or parsing JSON
                         e.printStackTrace()

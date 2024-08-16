@@ -3,8 +3,10 @@ import java.io.File
 
 data class MyObject(val name: String, val properties: MutableMap<String, Any>)
 
+val debug = true
 
 fun main(args: Array<String>) {
+
     println("Starting...")
     var filePath = if (args.isNotEmpty()) args[0] else "config.vjuka"
     val file = File(filePath)

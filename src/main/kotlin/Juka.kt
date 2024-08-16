@@ -6,22 +6,23 @@ import com.jme3.input.controls.KeyTrigger
 import com.jme3.light.AmbientLight
 import com.jme3.light.DirectionalLight
 import com.jme3.material.Material
-import com.jme3.material.RenderState
 import com.jme3.math.ColorRGBA
 import com.jme3.math.Vector3f
 import com.jme3.scene.Geometry
 import com.jme3.scene.Mesh
 import com.jme3.scene.Node
 import com.jme3.scene.VertexBuffer
+import com.jme3.scene.shape.Quad
 import com.jme3.system.AppSettings
 import com.jme3.texture.Texture2D
 import com.jme3.texture.plugins.AWTLoader
-import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
 import java.lang.System.err
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import javax.imageio.ImageIO
 
 class Main(private val appInfos: List<AppInfo>) : SimpleApplication(), ActionListener {
@@ -29,7 +30,40 @@ class Main(private val appInfos: List<AppInfo>) : SimpleApplication(), ActionLis
     private var selectedRow = 0
     private var selectedCol = 0
 
+    private lateinit var timeText: BitmapText
+
+    override fun simpleUpdate(tpf: Float) {
+        // Update the time text
+        //val currentTime = LocalDateTime.now().withHour(12).withMinute(39).withSecond(0).format(DateTimeFormatter.ofPattern("EEEE, hh:mm:ss a"))
+        val currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, hh:mm:ss a"))
+        timeText.text = currentTime
+    }
+
     override fun simpleInitApp() {
+        setDisplayFps(debug.not())
+        setDisplayStatView(debug.not())
+
+        // Create the top bar
+        val topBar = Geometry("TopBar", Quad(settings.width.toFloat(), 100f))
+        val mat = Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md")
+        mat.setColor("Color", ColorRGBA.Black)
+        topBar.material = mat
+        topBar.setLocalTranslation(0f, settings.height.toFloat() - 40f, 0f)
+        guiNode.attachChild(topBar)
+
+        // Add text to the top bar
+        val guiFont = assetManager.loadFont("Interface/Fonts/Default.fnt")
+        val text = BitmapText(guiFont, false)
+        text.text = "vJuka (version 0.0.1)"
+        text.setLocalTranslation(10f, settings.height.toFloat() - 10f, 0f)
+        guiNode.attachChild(text)
+
+        // Add time text to the top bar
+        timeText = BitmapText(guiFont, false)
+        timeText.setLocalTranslation(settings.width.toFloat() - 200f, settings.height.toFloat() - 10f, 0f)
+        guiNode.attachChild(timeText)
+
+
         // Set background color
         viewPort.backgroundColor = ColorRGBA(51f / 255f, 52f / 255f, 71f / 255f, 1f)
 
@@ -42,9 +76,11 @@ class Main(private val appInfos: List<AppInfo>) : SimpleApplication(), ActionLis
         sun.direction = Vector3f(-0.5f, -0.5f, -0.5f).normalizeLocal()
         rootNode.addLight(sun)
 
-            /*val ambientLight = AmbientLight() //MIGHT NOT NEED IT? FOR NOW I JUST ADDED IT
-        ambientLight.color = ColorRGBA.White.mult(0.3f) // Adjust color and intensity
-        rootNode.addLight(ambientLight)*/
+        //Maybe?
+        // Add ambient light
+        val ambient = AmbientLight()
+        ambient.color = ColorRGBA.White.mult(0.5f) // Adjust the intensity as needed
+        rootNode.addLight(ambient)
 
         // Create hexagons
         hexagons = createHexagonsGrid(appInfos)
@@ -74,7 +110,7 @@ class Main(private val appInfos: List<AppInfo>) : SimpleApplication(), ActionLis
         }
 
         // Adjust the camera position to view the hexagons centered with the first hexagon in the top left
-        cam.location = Vector3f(200f, 100f, 300f)
+        cam.location = Vector3f(200f, 100f, 700f)
         cam.lookAt(Vector3f(200f, 100f, 0f), Vector3f.UNIT_Y)
     }
 
@@ -118,8 +154,8 @@ class Main(private val appInfos: List<AppInfo>) : SimpleApplication(), ActionLis
         val hexagons = Array(rows) { Array<Node?>(cols) { null } }
         val hexagonSideLength = 80f
         val hexagonHeight = hexagonSideLength * Math.sqrt(3.0).toFloat() / 2
-        val horizontalSpacing = hexagonSideLength * 2.1f // Adjusted for spacing
-        val verticalSpacing = hexagonHeight * 2.1f // Adjusted for spacing
+        val horizontalSpacing = hexagonSideLength * 2.05f // Adjusted for spacing
+        val verticalSpacing = hexagonHeight * 1.55f // Adjusted for spacing
         val startX = 10 + hexagonSideLength
         val startY = 100
 
@@ -232,14 +268,35 @@ class Main(private val appInfos: List<AppInfo>) : SimpleApplication(), ActionLis
         if (!isPressed) return
 
         when (name) {
-            "Left" -> selectedCol = (selectedCol - 1 + hexagons[0].size) % hexagons[0].size
-            "Right" -> selectedCol = (selectedCol + 1) % hexagons[0].size
-            "Up" -> selectedRow = (selectedRow - 1 + hexagons.size) % hexagons.size
-            "Down" -> selectedRow = (selectedRow + 1) % hexagons.size
+            "Left" -> {
+                selectedCol = (selectedCol - 1 + hexagons[0].size) % hexagons[0].size
+                // Ensure selectedCol stays within bounds
+                selectedCol = selectedCol.coerceIn(0, hexagons[0].size - 1)
+            }
+            "Right" -> {
+                selectedCol = (selectedCol + 1) % hexagons[0].size
+                // Ensure selectedCol stays within bounds
+                selectedCol = selectedCol.coerceIn(0, hexagons[0].size - 1)
+            }
+            "Up" -> {
+                selectedRow = (selectedRow - 1 + hexagons.size) % hexagons.size
+                // Ensure selectedRow stays within bounds
+                selectedRow = selectedRow.coerceIn(0, hexagons.size - 1)
+            }
+            "Down" -> {
+                selectedRow = (selectedRow + 1) % hexagons.size
+                // Ensure selectedRow stays within bounds
+                selectedRow = selectedRow.coerceIn(0, hexagons.size - 1)
+            }
             "Enter" ->  launchSelectedApp()
         }
 
-        highlightHexagon(selectedRow, selectedCol)
+        // Check if selected indices are within bounds before accessing hexagons
+        if (selectedRow in 0 until hexagons.size && selectedCol in 0 until hexagons[0].size) {
+            highlightHexagon(selectedRow, selectedCol)
+        } else {
+            println("Invalid index: $selectedRow, $selectedCol") // For debugging
+        }
     }
 
     private fun launchSelectedApp() {
