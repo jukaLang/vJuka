@@ -1,0 +1,6 @@
+{
+    "label":	"TubeExplorer",
+    "icon":	"TubeExplorer.png",
+    "launch":	"launch.sh",
+    "description":	"Tube Explorer by Juka"
+}

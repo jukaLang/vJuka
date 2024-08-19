@@ -1,4 +1,5 @@
 import com.jme3.app.SimpleApplication
+import com.jme3.asset.AssetManager
 import com.jme3.font.BitmapText
 import com.jme3.input.KeyInput
 import com.jme3.input.controls.ActionListener
@@ -8,6 +9,7 @@ import com.jme3.light.DirectionalLight
 import com.jme3.material.Material
 import com.jme3.math.ColorRGBA
 import com.jme3.math.Vector3f
+import com.jme3.post.FilterPostProcessor
 import com.jme3.scene.Geometry
 import com.jme3.scene.Mesh
 import com.jme3.scene.Node
@@ -24,6 +26,36 @@ import java.lang.System.err
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.imageio.ImageIO
+import com.jme3.post.Filter
+import com.jme3.renderer.RenderManager
+import com.jme3.renderer.ViewPort
+import com.jme3.system.JmeSystem
+import com.jme3.texture.FrameBuffer
+
+
+/*class AnaglyphFilter : Filter("AnaglyphFilter") {
+    val assetManager = JmeSystem.newAssetManager(Thread.currentThread().contextClassLoader.getResource("com/jme3/asset/Desktop.cfg"))
+    private lateinit var material: Material
+
+    override fun initFilter(assetManager: AssetManager, renderManager: RenderManager, vp: ViewPort, w: Int, h: Int) {
+        println("Attempting to load material from: MatDefs/Anaglyph.j3md")
+        material = Material(assetManager, "MatDefs/Anaglyph.j3md")
+        println("Material loaded successfully")
+    }
+
+    override fun getMaterial(): Material {
+        return material
+    }
+
+    override fun preFrame(tpf: Float) {
+        // Implement preFrame logic if needed
+    }
+
+    override fun postFrame(renderManager: RenderManager, viewPort: ViewPort, prevFilterBuffer: FrameBuffer, sceneBuffer: FrameBuffer) {
+        // Implement postFrame logic if needed
+    }
+}*/
+
 
 class Main(private val appInfos: List<AppInfo>) : SimpleApplication(), ActionListener {
     private lateinit var hexagons: Array<Array<Node>>
@@ -40,8 +72,16 @@ class Main(private val appInfos: List<AppInfo>) : SimpleApplication(), ActionLis
     }
 
     override fun simpleInitApp() {
-        setDisplayFps(debug.not())
-        setDisplayStatView(debug.not())
+        setDisplayFps(debug)
+        setDisplayStatView(debug)
+
+
+        // Add anaglyph filter
+        /*val fpp = FilterPostProcessor(assetManager)
+        val anaglyph = AnaglyphFilter()
+        fpp.addFilter(anaglyph)
+        viewPort.addProcessor(fpp)*/
+
 
         // Create the top bar
         val topBar = Geometry("TopBar", Quad(settings.width.toFloat(), 100f))
@@ -159,60 +199,69 @@ class Main(private val appInfos: List<AppInfo>) : SimpleApplication(), ActionLis
         val startX = 10 + hexagonSideLength
         val startY = 100
 
-        for ((index, appInfo) in appInfos.withIndex()) {
-            val row = index / cols
-            val col = index % cols
+        // Render from top to bottom
+        for (row in 0 until rows) {
+            for (col in 0 until cols) {
+                val index = row * cols + col
+                if (index >= totalHexagons) break
 
-            val hexagon = createHexagonMesh(hexagonSideLength)
-            val geom = Geometry("Hexagon$row$col", hexagon)
+                val appInfo = appInfos[index]
+                val hexagon = createHexagonMesh(hexagonSideLength)
+                val geom = Geometry("Hexagon$row$col", hexagon)
 
-            val file = File(appInfo.icon)
-            val image = ImageIO.read(file)
+                val file = File(appInfo.icon)
+                println("File path: ${file.absolutePath}")
+                if (file.exists() && file.canRead()) {
+                    val image = ImageIO.read(file)
 
+                    val targetWidth = (hexagonSideLength * 2).toInt()
+                    val targetHeight = (hexagonHeight * 2).toInt()
 
-            val targetWidth = (hexagonSideLength * 2).toInt()
-            val targetHeight = (hexagonHeight * 2).toInt()
+                    val processedImage = processImage(appInfo.icon, targetWidth, targetHeight)
 
-            val processedImage =  processImage(appInfo.icon, targetWidth, targetHeight)
+                    val awtLoader = AWTLoader()
+                    val texture = Texture2D(awtLoader.load(processedImage, true))
 
-            val awtLoader = AWTLoader()
-            val texture = Texture2D(awtLoader.load(processedImage, true))
+                    val material = Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md")
+                    material.setTexture("ColorMap", texture)
+                    material.setColor("Color", ColorRGBA(0.5f, 0.5f, 0.5f, 1f)) // Set base color to grey
 
-            val material = Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md")
-            material.setTexture("ColorMap", texture)
-            material.setColor("Color", ColorRGBA(0.5f, 0.5f, 0.5f, 1f)) // Set base color to grey
+                    geom.material = material
 
-            geom.material = material
+                    val node = Node("HexagonNode$row$col")
+                    node.attachChild(geom)
 
+                    // Calculate the position with offset for staggered rows
+                    val offsetX = if (row % 2 == 0) 0f else horizontalSpacing / 2
+                    val centerX = startX + col * horizontalSpacing + offsetX
+                    val centerY = startY + row * verticalSpacing
+                    node.localTranslation = Vector3f(centerX, centerY, 0f)
 
+                    // Add label and description inside the hexagon
+                    val label = BitmapText(guiFont, false)
+                    label.text = appInfo.label
+                    label.setSize(guiFont.charSet.renderedSize * 0.5f) // Adjusted size
+                    label.color = ColorRGBA.White // Set text color to white
+                    label.setLocalTranslation(-label.lineWidth / 2, label.lineHeight / 2, 0.1f) // Slightly forward on Z-axis
+                    node.attachChild(label)
 
-            val node = Node("HexagonNode$row$col")
-            node.attachChild(geom)
+                    val description = BitmapText(guiFont, false)
+                    description.text = appInfo.description
+                    description.setSize(guiFont.charSet.renderedSize * 0.4f) // Adjusted size
+                    description.color = ColorRGBA.White // Set text color to white
+                    description.setLocalTranslation(-description.lineWidth / 2, -description.lineHeight / 2, 0.1f) // Slightly forward on Z-axis
+                    node.attachChild(description)
 
-            val centerX = startX + col * horizontalSpacing + (row % 2) * (horizontalSpacing / 2)
-            val centerY = startY + row * verticalSpacing
-            node.localTranslation = Vector3f(centerX, centerY, 0f)
-
-            // Add label and description inside the hexagon
-            val label = BitmapText(guiFont, false)
-            label.text = appInfo.label
-            label.setSize(guiFont.charSet.renderedSize * 0.5f) // Adjusted size
-            label.color = ColorRGBA.White // Set text color to white
-            label.setLocalTranslation(-label.lineWidth / 2, label.lineHeight / 2, 0.1f) // Slightly forward on Z-axis
-            node.attachChild(label)
-
-            val description = BitmapText(guiFont, false)
-            description.text = appInfo.description
-            description.setSize(guiFont.charSet.renderedSize * 0.4f) // Adjusted size
-            description.color = ColorRGBA.White // Set text color to white
-            description.setLocalTranslation(-description.lineWidth / 2, -description.lineHeight / 2, 0.1f) // Slightly forward on Z-axis
-            node.attachChild(description)
-
-            hexagons[row][col] = node
+                    hexagons[row][col] = node
+                } else {
+                    println("File does not exist or cannot be read: ${file.absolutePath}")
+                }
+            }
         }
 
         return hexagons.map { row -> row.filterNotNull().toTypedArray() }.toTypedArray()
     }
+
 
     fun processImage(imagePath: String, targetWidth: Int, targetHeight: Int): BufferedImage {
         val image = ImageIO.read(File(imagePath))
@@ -279,16 +328,22 @@ class Main(private val appInfos: List<AppInfo>) : SimpleApplication(), ActionLis
                 selectedCol = selectedCol.coerceIn(0, hexagons[0].size - 1)
             }
             "Up" -> {
-                selectedRow = (selectedRow - 1 + hexagons.size) % hexagons.size
-                // Ensure selectedRow stays within bounds
-                selectedRow = selectedRow.coerceIn(0, hexagons.size - 1)
+                // Custom logic to navigate from bottom to top, middle, then top
+                selectedRow = when (selectedRow) {
+                    hexagons.size - 1 -> hexagons.size / 2 // From bottom to middle
+                    hexagons.size / 2 -> 0 // From middle to top
+                    else -> hexagons.size - 1 // From top to bottom
+                }
             }
             "Down" -> {
-                selectedRow = (selectedRow + 1) % hexagons.size
-                // Ensure selectedRow stays within bounds
-                selectedRow = selectedRow.coerceIn(0, hexagons.size - 1)
+                // Custom logic to navigate from top to middle, then bottom
+                selectedRow = when (selectedRow) {
+                    0 -> hexagons.size / 2 // From top to middle
+                    hexagons.size / 2 -> hexagons.size - 1 // From middle to bottom
+                    else -> 0 // From bottom to top
+                }
             }
-            "Enter" ->  launchSelectedApp()
+            "Enter" -> launchSelectedApp()
         }
 
         // Check if selected indices are within bounds before accessing hexagons

@@ -5,21 +5,20 @@ data class MyObject(val name: String, val properties: MutableMap<String, Any>)
 
 val debug = true
 
+
 fun main(args: Array<String>) {
 
-    println("Starting...")
-    var filePath = if (args.isNotEmpty()) args[0] else "config.vjuka"
-    val file = File(filePath)
+    // Scan the JukaApp folder
+    /*val configFiles = scanJukaAppFolder("./JukaApps")
 
-    if (!file.exists() || !filePath.endsWith(".vjuka")) {
-        println("File not found or invalid extension. Using default file: config.vjuka")
-        filePath = "config.vjuka"
+    // Parse each configuration file
+    val objects = mutableMapOf<String, MyObject>()
+    configFiles.forEach { configFileContent ->
+        val parsedObjects = parseInput(configFileContent)
+        objects.putAll(parsedObjects)
     }
 
-    val input = File(filePath).readText()
-
-    val objects = parseInput(input)
-
+    // Print the parsed objects
     for ((sceneName, sceneObj) in objects) {
         println("Scene: $sceneName")
         for ((objName, obj) in sceneObj.properties) {
@@ -32,9 +31,10 @@ fun main(args: Array<String>) {
                 println("S  $objName: $obj")
             }
         }
-    }
+    }*/
 
-    val appInfos = scanApps("./Apps")
+    val appInfos = scanApps("./Apps","tsp")
+    val configFiles = scanApps("./JukaApps","vjuka")
     appInfos.forEach { appInfo ->
         println("Label: ${appInfo.label}")
         println("Icon: ${appInfo.icon}")

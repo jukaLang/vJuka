@@ -15,6 +15,7 @@ dependencies {
     implementation("org.jmonkeyengine:jme3-desktop:3.5.0-stable")
     implementation("org.jmonkeyengine:jme3-lwjgl:3.5.0-stable")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation("org.jmonkeyengine:jme3-effects:3.5.0-stable")
 }
 
 application {

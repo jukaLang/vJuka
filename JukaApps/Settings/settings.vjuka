@@ -1,0 +1,17 @@
+Initialize:
+   textcolor: red
+   textsize: 15
+   titlesize: 30
+Scene1:
+   Title:
+      size: #titlesize
+      color: red
+      text: Hello Juka
+   Button1:
+      type: button
+      action: Scene1
+   Button2:
+      type: button
+      action: exit
+      text: Exit2
+

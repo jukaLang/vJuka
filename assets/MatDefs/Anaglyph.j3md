@@ -1,0 +1,14 @@
+MaterialDef Anaglyph {
+    MaterialParameters {
+        Texture2D ColorMap
+    }
+
+    Technique {
+        VertexShader GLSL100:   Shaders/Anaglyph.vert
+        FragmentShader GLSL100: Shaders/Anaglyph.frag
+
+        WorldParameters {
+            WorldViewProjectionMatrix
+        }
+    }
+}
